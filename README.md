@@ -3,6 +3,8 @@
 A desktop emulator for TinyGo + Wio Terminal that speeds up your development cycle.
 Preview display output and button input without flashing to the device.
 
+![Wio Terminal Emulator](assets/wio_terminal_preview.png)
+
 ## Features
 
 - Install with a single `go install` command
