@@ -188,31 +188,51 @@ func findModuleRootInCache() (string, error) {
 	if !ok {
 		return "", fmt.Errorf("build info not available")
 	}
+	version := info.Main.Version
+	suffix := emulatorModule + "@" + version
 
-	// Use the go binary in the same directory as our executable to get the
-	// correct GOMODCACHE, avoiding goenv version switching based on CWD.
-	exe, err := os.Executable()
-	if err != nil {
-		return "", fmt.Errorf("finding executable: %w", err)
-	}
-	goBin := filepath.Join(filepath.Dir(exe), "go")
-
-	out, err := exec.Command(goBin, "env", "GOMODCACHE").Output()
-	if err != nil {
-		// Fall back to the go binary in PATH.
-		out, err = exec.Command("go", "env", "GOMODCACHE").Output()
-		if err != nil {
-			return "", fmt.Errorf("go env GOMODCACHE: %w", err)
+	for _, cache := range modCacheCandidates() {
+		p := filepath.Join(cache, suffix)
+		if _, err := os.Stat(p); err == nil {
+			return p, nil
 		}
 	}
-	modCache := strings.TrimSpace(string(out))
+	return "", fmt.Errorf("module not found in any cache: %s", suffix)
+}
 
-	version := info.Main.Version
-	cachePath := filepath.Join(modCache, emulatorModule+"@"+version)
-	if _, err := os.Stat(cachePath); err == nil {
-		return cachePath, nil
+// modCacheCandidates returns possible GOMODCACHE directories to search.
+func modCacheCandidates() []string {
+	seen := map[string]bool{}
+	var caches []string
+	add := func(p string) {
+		if p != "" && !seen[p] {
+			seen[p] = true
+			caches = append(caches, p)
+		}
 	}
-	return "", fmt.Errorf("module not found in cache: %s@%s", emulatorModule, version)
+
+	// 1. GOMODCACHE env var (explicitly set).
+	add(os.Getenv("GOMODCACHE"))
+
+	// 2. go binary in the same dir as our executable (installed version).
+	if exe, err := os.Executable(); err == nil {
+		goBin := filepath.Join(filepath.Dir(exe), "go")
+		if out, err := exec.Command(goBin, "env", "GOMODCACHE").Output(); err == nil {
+			add(strings.TrimSpace(string(out)))
+		}
+	}
+
+	// 3. Default $HOME/go/pkg/mod.
+	if home, err := os.UserHomeDir(); err == nil {
+		add(filepath.Join(home, "go", "pkg", "mod"))
+	}
+
+	// 4. go binary in PATH.
+	if out, err := exec.Command("go", "env", "GOMODCACHE").Output(); err == nil {
+		add(strings.TrimSpace(string(out)))
+	}
+
+	return caches
 }
 
 func runGoModTidy(dir string) error {
