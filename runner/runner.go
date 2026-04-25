@@ -235,8 +235,21 @@ func modCacheCandidates() []string {
 	return caches
 }
 
+// goBinary returns the path to the go binary that matches the running
+// executable. When installed via `go install`, this ensures we use the same
+// Go version that compiled the binary, regardless of goenv's active version.
+func goBinary() string {
+	if exe, err := os.Executable(); err == nil {
+		candidate := filepath.Join(filepath.Dir(exe), "go")
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+	return "go"
+}
+
 func runGoModTidy(dir string) error {
-	cmd := exec.Command("go", "mod", "tidy")
+	cmd := exec.Command(goBinary(), "mod", "tidy")
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -244,7 +257,7 @@ func runGoModTidy(dir string) error {
 }
 
 func runGoBuild(dir, outPath string) error {
-	cmd := exec.Command("go", "build", "-o", outPath, ".")
+	cmd := exec.Command(goBinary(), "build", "-o", outPath, ".")
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
