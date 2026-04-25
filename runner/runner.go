@@ -214,12 +214,12 @@ func modCacheCandidates() []string {
 	// 1. GOMODCACHE env var (explicitly set).
 	add(os.Getenv("GOMODCACHE"))
 
-	// 2. go binary in the same dir as our executable (installed version).
+	// 2. Derive from executable path: goenv installs to $GOPATH/bin/,
+	//    so $GOPATH = parent of bin dir, and GOMODCACHE = $GOPATH/pkg/mod.
 	if exe, err := os.Executable(); err == nil {
-		goBin := filepath.Join(filepath.Dir(exe), "go")
-		if out, err := exec.Command(goBin, "env", "GOMODCACHE").Output(); err == nil {
-			add(strings.TrimSpace(string(out)))
-		}
+		binDir := filepath.Dir(exe)
+		gopath := filepath.Dir(binDir)
+		add(filepath.Join(gopath, "pkg", "mod"))
 	}
 
 	// 3. Default $HOME/go/pkg/mod.
