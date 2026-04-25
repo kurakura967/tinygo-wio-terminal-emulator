@@ -10,7 +10,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
+	"strings"
 	"text/template"
 )
 
@@ -146,16 +148,31 @@ func writeGoMod(dir, moduleRoot string) error {
 	return os.WriteFile(filepath.Join(dir, "go.mod"), buf.Bytes(), 0644)
 }
 
-// findModuleRoot walks up from the working directory to find go.mod.
+// findModuleRoot returns the emulator module root directory.
+// It first searches upward from CWD (works for `go run .` in development),
+// then falls back to the Go module cache (works for `go install`).
 func findModuleRoot() (string, error) {
+	// 1. Walk up from CWD (development mode).
+	if root, err := findModuleRootFromCWD(); err == nil {
+		return root, nil
+	}
+
+	// 2. Module cache (installed via go install).
+	return findModuleRootInCache()
+}
+
+func findModuleRootFromCWD() (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
 	dir := cwd
 	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir, nil
+		candidate := filepath.Join(dir, "go.mod")
+		if data, err := os.ReadFile(candidate); err == nil {
+			if strings.Contains(string(data), emulatorModule) {
+				return dir, nil
+			}
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
@@ -163,7 +180,27 @@ func findModuleRoot() (string, error) {
 		}
 		dir = parent
 	}
-	return "", fmt.Errorf("go.mod not found from %s", cwd)
+	return "", fmt.Errorf("emulator go.mod not found from %s", cwd)
+}
+
+func findModuleRootInCache() (string, error) {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "", fmt.Errorf("build info not available")
+	}
+
+	out, err := exec.Command("go", "env", "GOMODCACHE").Output()
+	if err != nil {
+		return "", fmt.Errorf("go env GOMODCACHE: %w", err)
+	}
+	modCache := strings.TrimSpace(string(out))
+
+	version := info.Main.Version
+	cachePath := filepath.Join(modCache, emulatorModule+"@"+version)
+	if _, err := os.Stat(cachePath); err == nil {
+		return cachePath, nil
+	}
+	return "", fmt.Errorf("module not found in cache: %s@%s", emulatorModule, version)
 }
 
 func runGoModTidy(dir string) error {
