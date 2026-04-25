@@ -189,9 +189,21 @@ func findModuleRootInCache() (string, error) {
 		return "", fmt.Errorf("build info not available")
 	}
 
-	out, err := exec.Command("go", "env", "GOMODCACHE").Output()
+	// Use the go binary in the same directory as our executable to get the
+	// correct GOMODCACHE, avoiding goenv version switching based on CWD.
+	exe, err := os.Executable()
 	if err != nil {
-		return "", fmt.Errorf("go env GOMODCACHE: %w", err)
+		return "", fmt.Errorf("finding executable: %w", err)
+	}
+	goBin := filepath.Join(filepath.Dir(exe), "go")
+
+	out, err := exec.Command(goBin, "env", "GOMODCACHE").Output()
+	if err != nil {
+		// Fall back to the go binary in PATH.
+		out, err = exec.Command("go", "env", "GOMODCACHE").Output()
+		if err != nil {
+			return "", fmt.Errorf("go env GOMODCACHE: %w", err)
+		}
 	}
 	modCache := strings.TrimSpace(string(out))
 
