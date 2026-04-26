@@ -119,9 +119,10 @@ func (g *game) Update() error {
 	mx, my := ebiten.CursorPosition()
 	lmb := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 
-	Buttons.A = (lmb && hitA.contains(mx, my)) || ebiten.IsKeyPressed(ebiten.KeyZ)
+	// On the real Wio Terminal, buttons are ordered C / B / A from left to right.
+	Buttons.C = (lmb && hitA.contains(mx, my)) || ebiten.IsKeyPressed(ebiten.KeyC)
 	Buttons.B = (lmb && hitB.contains(mx, my)) || ebiten.IsKeyPressed(ebiten.KeyX)
-	Buttons.C = (lmb && hitC.contains(mx, my)) || ebiten.IsKeyPressed(ebiten.KeyC)
+	Buttons.A = (lmb && hitC.contains(mx, my)) || ebiten.IsKeyPressed(ebiten.KeyZ)
 	Buttons.Center = (lmb && hitJoystick.contains(mx, my)) || ebiten.IsKeyPressed(ebiten.KeyEnter)
 	Buttons.Up = ebiten.IsKeyPressed(ebiten.KeyArrowUp)
 	Buttons.Down = ebiten.IsKeyPressed(ebiten.KeyArrowDown)
@@ -160,7 +161,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 	// 4. Visual feedback for button presses.
 	const pressAlpha = 120
 	pressColor := color.RGBA{255, 255, 255, pressAlpha}
-	if Buttons.A {
+	if Buttons.C {
 		vector.DrawFilledRect(screen,
 			float32(hitA.x0), float32(hitA.y0),
 			float32(hitA.x1-hitA.x0), float32(hitA.y1-hitA.y0),
@@ -172,7 +173,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 			float32(hitB.x1-hitB.x0), float32(hitB.y1-hitB.y0),
 			pressColor, false)
 	}
-	if Buttons.C {
+	if Buttons.A {
 		vector.DrawFilledRect(screen,
 			float32(hitC.x0), float32(hitC.y0),
 			float32(hitC.x1-hitC.x0), float32(hitC.y1-hitC.y0),
