@@ -5,6 +5,8 @@ Preview display output and button input without flashing to the device.
 
 ![Wio Terminal Emulator](assets/wio_terminal_preview.png)
 
+![Demo](assets/demo.gif)
+
 ## Features
 
 - Install with a single `go install` command
