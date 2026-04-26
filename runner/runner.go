@@ -20,8 +20,9 @@ const emulatorModule = "github.com/kurakura967/tinygo-wio-terminal-emulator"
 
 // importReplacements maps original TinyGo import paths to emulator stubs.
 var importReplacements = map[string]string{
-	"machine":                       emulatorModule + "/machine",
-	"tinygo.org/x/drivers/ili9341": emulatorModule + "/driver/ili9341",
+	"machine":                                              emulatorModule + "/machine",
+	"tinygo.org/x/drivers/ili9341":                        emulatorModule + "/driver/ili9341",
+	"tinygo.org/x/drivers/examples/ili9341/initdisplay":   emulatorModule + "/driver/initdisplay",
 }
 
 // Run rewrites imports in filePath, generates a temporary project, and
